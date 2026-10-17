@@ -2,6 +2,7 @@ import * as D from './dates.js';
 import { holidayName } from './holidays.js';
 import { TEMPLATES, blankState, uid } from './templates.js';
 import * as IO from './io.js';
+import * as F from './files.js';
 
 /* =========================================================
  * 定数・テーマ
@@ -63,6 +64,8 @@ const ICON = {
   down: '<path d="m6 9 6 6 6-6"/>',
   bar: '<rect x="3" y="5" width="10" height="4" rx="1.5"/><rect x="8" y="11" width="12" height="4" rx="1.5"/><rect x="5" y="17" width="7" height="3" rx="1.5"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
+  save: '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>',
+  folderOpen: '<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
 };
 const icon = (k, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k] || ''}</svg>`;
 
@@ -186,6 +189,8 @@ function saveNow() {
   }
   LS.set('stride:index', index);
   renderProjName();
+  scheduleFileSave();
+  renderFileState();
   const st = $('#saveState');
   if (st) {
     st.textContent = ok ? '保存済み' : '保存できません';
@@ -214,6 +219,7 @@ function loadState(id, state) {
   renderAll();
   updateUndoBtns();
   requestAnimationFrame(scrollToStart);
+  linkFile(id);
 }
 function openProject(id) {
   const s = LS.get('stride:p:' + id, null);
@@ -234,6 +240,7 @@ function createProject(state, { silent } = {}) {
 function deleteProject(id) {
   index.projects = index.projects.filter((p) => p.id !== id);
   LS.del('stride:p:' + id);
+  F.delHandle('f:' + id);
   if (index.current === id) {
     index.current = null;
     if (index.projects.length) openProject(index.projects[0].id);
@@ -241,6 +248,212 @@ function deleteProject(id) {
   }
   LS.set('stride:index', index);
   renderProjName();
+}
+
+/* =========================================================
+ * ローカルファイルへの保存・読み込み
+ * ======================================================= */
+// file.handle: 現在のスケジュールに紐づくファイル（Chrome / Edge のみ）
+const file = { handle: null, writing: false };
+const curProj = () => index.projects.find((p) => p.id === index.current);
+const stateText = () => JSON.stringify(S, null, 2);
+function hash(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(36);
+}
+const fileDirty = () => {
+  const p = curProj();
+  return !p?.fileHash || p.fileHash !== hash(stateText());
+};
+async function linkFile(id) {
+  file.handle = F.supported ? await F.getHandle('f:' + id) : null;
+  if (index.current !== id) return;
+  renderFileState();
+}
+function markFileSaved(name) {
+  const p = curProj();
+  if (!p) return;
+  p.fileName = name;
+  p.fileHash = hash(stateText());
+  p.fileSaved = Date.now();
+  LS.set('stride:index', index);
+  renderFileState();
+}
+function renderFileState() {
+  const b = $('#fileBtn');
+  if (!b || !S) return;
+  const p = curProj();
+  const dirty = fileDirty();
+  b.classList.toggle('dirty', !!p?.fileName && dirty);
+  b.classList.toggle('linked', !!p?.fileName && !dirty);
+  b.title = p?.fileName
+    ? `${p.fileName}\n${dirty ? 'ファイルに保存されていない変更があります（クリックで保存）' : 'ファイルに保存済み'}`
+    : `ファイルに保存 (${MOD}+S)`;
+}
+
+/** 現在のスケジュールをファイルに保存する。as=true で常に保存先を選ぶ */
+async function saveToFile({ as = false } = {}) {
+  saveNow();
+  const base = IO.safeName(S.meta.title);
+  if (!F.supported) {
+    IO.download(base + F.EXT, stateText(), 'application/json');
+    markFileSaved(base + F.EXT);
+    return toast('ダウンロードフォルダに保存しました。「ファイルを開く」で再度読み込めます');
+  }
+  try {
+    let h = !as && file.handle && (await F.permitted(file.handle, true)) ? file.handle : null;
+    if (!h) {
+      const dir = await F.getHandle('dir');
+      if (dir && !as && (await F.permitted(dir, true))) {
+        h = await dir.getFileHandle(await F.freeName(dir, base), { create: true });
+      } else {
+        h = await F.pickSave(base + F.EXT, dir || 'documents');
+        if (!h) return;
+      }
+    }
+    await F.write(h, stateText());
+    file.handle = h;
+    await F.setHandle('f:' + index.current, h);
+    markFileSaved(h.name);
+    toast(`「${h.name}」に保存しました`);
+  } catch (e) {
+    toast('ファイルに保存できませんでした：' + (e.message || e.name));
+  }
+}
+
+// ファイルに紐づいている場合は、変更のたびに自動で上書き保存（権限があるときだけ）
+let fileTimer;
+function scheduleFileSave() {
+  if (!file.handle || !LS.get('stride:autofile', true)) return;
+  clearTimeout(fileTimer);
+  const id = index.current;
+  fileTimer = setTimeout(async () => {
+    if (id !== index.current || !file.handle || file.writing || !fileDirty()) return;
+    if (!(await F.permitted(file.handle))) return renderFileState();
+    file.writing = true;
+    try {
+      await F.write(file.handle, stateText());
+      markFileSaved(file.handle.name);
+    } catch {
+      renderFileState();
+    } finally {
+      file.writing = false;
+    }
+  }, 1200);
+}
+
+/** ファイルハンドルからスケジュールを開く */
+async function openHandle(h) {
+  const { text, name } = await F.read(h);
+  let st;
+  try {
+    st = JSON.parse(text);
+  } catch {
+    throw new Error('JSONとして読み込めません');
+  }
+  if (!IO.validState(st)) throw new Error('Strideのデータではないようです');
+  // すでに同じファイルを開いたことがあれば、そのスケジュールを最新の内容で開き直す
+  for (const p of index.projects) {
+    if (p.fileName !== name) continue;
+    const old = await F.getHandle('f:' + p.id);
+    if (old && (await old.isSameEntry(h).catch(() => false))) {
+      saveNow();
+      LS.set('stride:p:' + p.id, st);
+      loadState(p.id, st);
+      markFileSaved(name);
+      return toast(`「${name}」を開きました`);
+    }
+  }
+  createProject(migrate(st), { silent: true });
+  await F.setHandle('f:' + index.current, h);
+  file.handle = h;
+  markFileSaved(name);
+  toast(`「${name}」を開きました`);
+}
+async function openFromFile() {
+  if (!F.supported) return importFile();
+  try {
+    const h = await F.pickOpen((await F.getHandle('dir')) || 'documents');
+    if (h) await openHandle(h);
+  } catch (e) {
+    toast('開けませんでした：' + (e.message || e.name));
+  }
+}
+
+/** 保存フォルダ：フォルダ内のスケジュールを一覧して開く */
+async function openFolder() {
+  if (!F.folderSupported) {
+    return openModal({
+      title: `${icon('folderOpen')}保存フォルダ`,
+      body: `<p class="lead">このブラウザはフォルダへの直接保存に対応していません。<b>Chrome</b> または <b>Edge</b> で開くと、パソコンのフォルダに保存して一覧から開けるようになります。</p><p class="lead">このブラウザでは「ファイルに保存」でダウンロードフォルダに保存し、「ファイルを開く」で読み込めます。</p>`,
+      foot: `<span class="spacer"></span><button class="btn primary" data-close2>閉じる</button>`,
+      onMount: (m) => ($('[data-close2]', m).onclick = closeModal),
+    });
+  }
+  const dir = await F.getHandle('dir');
+  const ok = dir && (await F.permitted(dir));
+  const files = ok ? await F.listFolder(dir).catch(() => []) : [];
+  const fmt = (t) => new Date(t).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const cur = curProj()?.fileName;
+  const list = !dir
+    ? `<div class="fl-empty">${icon('folder')}<p>まだ保存フォルダが選ばれていません。<br>「フォルダを選ぶ」で、パソコンの好きなフォルダ（例：ドキュメント\\工程表）を指定してください。</p></div>`
+    : !ok
+      ? `<div class="fl-empty">${icon('folder')}<p>フォルダ「${esc(dir.name)}」へのアクセス許可が必要です。</p><button class="btn primary" data-act="perm">アクセスを許可</button></div>`
+      : files.length
+        ? `<div class="fl-list">${files
+            .map(
+              (f, i) => `<button class="fl-item ${f.name === cur ? 'on' : ''}" data-i="${i}">${icon('file')}<span class="fl-name">${esc(f.name.replace(/(\.stride)?\.json$/i, ''))}</span><small>${fmt(f.modified)}</small>${f.name === cur ? '<em>表示中</em>' : ''}</button>`
+            )
+            .join('')}</div>`
+        : `<div class="fl-empty">${icon('file')}<p>このフォルダにはまだスケジュールがありません。<br>下の「このフォルダに保存」で保存できます。</p></div>`;
+  openModal({
+    title: `${icon('folderOpen')}保存フォルダ`,
+    body: `<div class="fl-dir">${icon('folder')}<span>${dir ? esc(dir.name) : '未設定'}</span><button class="btn ghost" data-act="pick">${dir ? 'フォルダを変更' : 'フォルダを選ぶ'}</button></div>${list}<p class="hint">ファイルはパソコンのフォルダに <code>.stride.json</code> として保存されます。共有フォルダ（OneDrive・Box・Google ドライブなど）を選べば、他のパソコンからも開けます。</p>`,
+    foot: `<label class="chk"><input type="checkbox" id="autoFile" ${LS.get('stride:autofile', true) ? 'checked' : ''}> 保存したファイルに自動で上書き保存</label><span class="spacer"></span><button class="btn primary" data-act="save" ${dir ? '' : 'disabled'}>${icon('save')}このフォルダに保存</button>`,
+    wide: true,
+    onMount(m) {
+      m.addEventListener('click', async (e) => {
+        const b = e.target.closest('[data-act],[data-i]');
+        if (!b) return;
+        try {
+          if (b.dataset.i != null) {
+            closeModal();
+            return await openHandle(files[+b.dataset.i].handle);
+          }
+          const act = b.dataset.act;
+          if (act === 'pick') {
+            const d = await F.pickFolder();
+            if (!d) return;
+            await F.setHandle('dir', d);
+            return openFolder();
+          }
+          if (act === 'perm') {
+            if (await F.permitted(dir, true)) openFolder();
+            return;
+          }
+          if (act === 'save') {
+            if (!(await F.permitted(dir, true))) return;
+            // 表示中のファイルがこのフォルダにあればそこへ上書き、なければ新規作成
+            let h = file.handle && (await dir.resolve(file.handle).catch(() => null))?.length === 1 ? file.handle : null;
+            if (!h) h = await dir.getFileHandle(await F.freeName(dir, IO.safeName(S.meta.title)), { create: true });
+            await F.write(h, stateText());
+            file.handle = h;
+            await F.setHandle('f:' + index.current, h);
+            markFileSaved(h.name);
+            toast(`「${h.name}」に保存しました`);
+            return openFolder();
+          }
+        } catch (err) {
+          toast('エラー：' + (err.message || err.name));
+        }
+      });
+      $('#autoFile', m).onchange = (e) => {
+        LS.set('stride:autofile', e.target.checked);
+        if (e.target.checked) scheduleFileSave();
+      };
+    },
+  });
 }
 
 /* =========================================================
@@ -1724,6 +1937,8 @@ function openShortcuts() {
     ['1 / 2 / 3', '日 / 週 / 月 表示'],
     ['T', '今日へ移動'],
     [`${MOD} + ホイール`, 'ズーム'],
+    [`${MOD} + S`, 'ファイルに保存（Shift で名前を付けて保存）'],
+    [`${MOD} + O`, 'ファイルを開く'],
     [`${MOD} + P`, '印刷'],
     ['?', 'このヘルプ'],
   ];
@@ -1750,6 +1965,10 @@ function openPalette() {
     ['PNG画像をダウンロード', 'image', exportPng],
     ['Excelに書き出し', 'table', exportXlsx],
     ['CSVに書き出し', 'table', exportCsv],
+    ['ファイルに保存', 'save', () => saveToFile(), `${MOD}+S`],
+    ['名前を付けて保存', 'save', () => saveToFile({ as: true }), `${MOD}+Shift+S`],
+    ['ファイルを開く', 'folderOpen', openFromFile, `${MOD}+O`],
+    ['保存フォルダから開く', 'folder', openFolder],
     ['JSONでバックアップ', 'download', exportJson],
     ['ファイルを読み込む（JSON / Excel / CSV）', 'upload', importFile],
     ['印刷', 'print', doPrint, `${MOD}+P`],
@@ -1977,6 +2196,11 @@ function openProjects(anchor) {
     items.push({ label: esc(p.name), icon: p.id === index.current ? 'check' : 'file', on: p.id === index.current, sub: new Date(p.updated).toLocaleDateString('ja-JP'), fn: () => p.id !== index.current && openProject(p.id) });
   }
   items.push(
+    { sep: true, label: 'パソコンのファイル' },
+    { label: 'ファイルに保存', icon: 'save', kbd: `${MOD}+S`, fn: () => saveToFile() },
+    { label: '名前を付けて保存', icon: 'save', kbd: `${MOD}+⇧+S`, fn: () => saveToFile({ as: true }) },
+    { label: 'ファイルを開く', icon: 'folderOpen', kbd: `${MOD}+O`, fn: openFromFile },
+    { label: '保存フォルダから開く', icon: 'folder', fn: openFolder },
     { sep: true },
     { label: '新規作成（テンプレート）', icon: 'plus', fn: openTemplates },
     { label: 'このスケジュールを複製', icon: 'copy', fn: () => createProject(JSON.parse(JSON.stringify({ ...S, meta: { ...S.meta, title: S.meta.title + '（コピー）' } }))) },
@@ -2041,6 +2265,15 @@ function openAddMenu(anchor) {
 function bindToolbar() {
   const on = (id, fn) => $(id).addEventListener('click', fn);
   on('#projBtn', (e) => openProjects(e.currentTarget));
+  on('#fileBtn', () => saveToFile());
+  on('#openBtn', (e) =>
+    openMenu(e.currentTarget, [
+      { label: 'ファイルを開く', icon: 'folderOpen', kbd: `${MOD}+O`, fn: openFromFile },
+      { label: '保存フォルダから開く', icon: 'folder', sub: 'フォルダ内の一覧', fn: openFolder },
+      { sep: true },
+      { label: '名前を付けて保存', icon: 'save', kbd: `${MOD}+⇧+S`, fn: () => saveToFile({ as: true }) },
+    ])
+  );
   on('#undoBtn', undo);
   on('#redoBtn', redo);
   $$('#scaleSeg button').forEach((b) => b.addEventListener('click', () => setScale(b.dataset.scale)));
@@ -2105,8 +2338,12 @@ function bindKeys() {
     }
     if (mod && e.key.toLowerCase() === 's') {
       e.preventDefault();
-      saveNow();
-      return toast('自動保存されています（ファイルに保存するには「書き出し」）');
+      if (document.activeElement?.isContentEditable) document.activeElement.blur();
+      return saveToFile({ as: e.shiftKey });
+    }
+    if (mod && e.key.toLowerCase() === 'o') {
+      e.preventDefault();
+      return openFromFile();
     }
     if (e.key === 'Escape') {
       if (closeMenu() || closeModal()) return;
@@ -2267,4 +2504,4 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 boot();
 
 // テスト・デバッグ用
-window.__stride = { get state() { return S; }, renderAll, addTask, setScale, preparePrint, finishPrint, select, openSettings, openBulk, openPalette };
+window.__stride = { get state() { return S; }, saveToFile, openFolder, openFromFile, renderAll, addTask, setScale, preparePrint, finishPrint, select, openSettings, openBulk, openPalette };

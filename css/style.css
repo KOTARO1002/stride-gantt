@@ -1685,8 +1685,9 @@ body.exporting .sh-meta div:has(dd:empty) {
 /* =========================================================
  * レスポンシブ
  * ======================================================= */
-@media (max-width: 1560px) {
+@media (max-width: 1680px) {
   .lbl-md,
+  .lbl-sm,
   .save-state,
   .zoom-val,
   .cmd kbd {
@@ -1787,5 +1788,124 @@ body.exporting .sh-meta div:has(dd:empty) {
   }
   .board {
     max-height: calc(100dvh - 190px);
+  }
+}
+
+/* =========================================================
+ * ファイル保存
+ * ======================================================= */
+.file-btn {
+  position: relative;
+}
+.file-btn .dot {
+  display: none;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warn, #f59e0b);
+  box-shadow: 0 0 0 2px var(--panel);
+}
+.file-btn.dirty .dot {
+  display: block;
+}
+.file-btn.linked .ic {
+  color: var(--accent);
+}
+.fl-dir {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-2, transparent);
+  font-weight: 600;
+}
+.fl-dir span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fl-dir .ic {
+  color: var(--accent);
+}
+.fl-list {
+  display: grid;
+  gap: 4px;
+  max-height: 46vh;
+  overflow: auto;
+  margin-bottom: 10px;
+}
+.fl-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+}
+.fl-item:hover {
+  background: var(--sel);
+  border-color: var(--line);
+}
+.fl-item.on {
+  border-color: var(--accent);
+}
+.fl-item .ic {
+  color: var(--muted);
+  flex: none;
+}
+.fl-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.fl-item small {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.fl-item em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--accent);
+  border: 1px solid currentColor;
+  border-radius: 99px;
+  padding: 1px 8px;
+}
+.fl-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 26px 12px;
+  text-align: center;
+  color: var(--text-2);
+}
+.fl-empty > .ic {
+  width: 30px;
+  height: 30px;
+  color: var(--muted);
+}
+.fl-empty p {
+  margin: 0;
+  line-height: 1.7;
+}
+@media (max-width: 1420px) {
+  #openBtn {
+    display: none;
+  }
+  .proj-btn {
+    max-width: 168px;
   }
 }
