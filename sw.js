@@ -1,5 +1,5 @@
 // オフライン対応（ネットワーク優先・失敗時キャッシュ）
-const CACHE = 'stride-v1';
+const CACHE = 'stride-v2';
 const SHELL = ['./', './index.html', './css/style.css', './js/app.js', './js/dates.js', './js/holidays.js', './js/templates.js', './js/io.js', './icons/icon.svg', './manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {

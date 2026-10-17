@@ -2,8 +2,6 @@
 
 ブラウザだけで使える、日本の実務向けガントチャート作成ツールです。インストールもログインも不要で、データは自分のブラウザ内に保存されます。
 
-**▶ アプリを開く：https://kotaro1002.github.io/stride-gantt/**
-
 ![screenshot](docs/screenshot.png)
 
 ## 主な機能
