@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Stride — おしゃれな工程表・ガントチャート</title>
+    <meta name="description" content="ブラウザだけで使える、おしゃれなガントチャート作成ツール。ドラッグ操作、祝日・休業日対応、テンプレート、印刷・PDF・Excel出力、共有リンク。" />
+    <meta name="theme-color" content="#4f46e5" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <style id="pageStyle">@page { size: A4 landscape; margin: 8mm; }</style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="tb-row">
+        <a class="brand" href="./" title="Stride">
+          <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="9" fill="url(#lg)"/><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs><rect x="7" y="9" width="11" height="3.6" rx="1.8" fill="#fff"/><rect x="11" y="14.4" width="13" height="3.6" rx="1.8" fill="#fff" fill-opacity=".85"/><rect x="9" y="19.8" width="8" height="3.6" rx="1.8" fill="#fff" fill-opacity=".7"/></svg>
+          <span>Stride</span>
+        </a>
+        <button id="projBtn" class="proj-btn" title="スケジュールの切り替え・新規作成"><span id="projName"></span><i data-icon="chev"></i></button>
+        <span id="saveState" class="save-state">保存済み</span>
+
+        <div class="tb-group">
+          <button class="ibtn" id="undoBtn" title="元に戻す (Ctrl+Z)" data-icon="undo"></button>
+          <button class="ibtn" id="redoBtn" title="やり直し (Ctrl+Shift+Z)" data-icon="redo"></button>
+        </div>
+
+        <button class="btn primary" id="addBtn" data-icon="plus">追加</button>
+
+        <div class="seg" id="scaleSeg" role="group" aria-label="目盛り">
+          <button data-scale="day">日</button><button data-scale="week">週</button><button data-scale="month">月</button>
+        </div>
+        <div class="tb-group zoom">
+          <button class="ibtn" id="zoomOut" title="縮小" data-icon="zoomOut"></button>
+          <button class="zoom-val" id="zoomVal" title="100%に戻す">100%</button>
+          <button class="ibtn" id="zoomIn" title="拡大" data-icon="zoomIn"></button>
+          <button class="ibtn" id="fitBtn" title="幅に合わせる" data-icon="fit"></button>
+        </div>
+        <button class="btn ghost" id="todayBtn" data-icon="today">今日</button>
+
+        <span class="spacer"></span>
+
+        <button class="cmd" id="cmdBtn" data-icon="search">コマンド<kbd id="cmdKbd">Ctrl K</kbd></button>
+        <button class="ibtn hide-sm" id="tplBtn" title="新規作成（テンプレート）" data-icon="template"></button>
+        <button class="ibtn hide-sm" id="bulkBtn" title="テキストから一括作成" data-icon="sparkle"></button>
+        <button class="btn ghost" id="shareBtn" data-icon="share"><span class="hide-sm lbl-md">共有</span></button>
+        <button class="btn ghost" id="exportBtn" data-icon="download"><span class="hide-sm lbl-md">書き出し</span></button>
+        <button class="btn" id="printBtn" data-icon="print"><span class="hide-sm">印刷</span></button>
+        <div class="tb-group">
+          <button class="ibtn" id="themeBtn" title="カラーテーマ" data-icon="palette"></button>
+          <button class="ibtn" id="modeBtn" title="ライト / ダーク切り替え"></button>
+          <button class="ibtn" id="settingsBtn" title="設定" data-icon="settings"></button>
+          <button class="ibtn hide-sm" id="helpBtn" title="ショートカット (?)" data-icon="keyboard"></button>
+        </div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <article class="sheet" id="sheet">
+        <header class="sheet-head">
+          <div class="sh-main">
+            <div class="sh-kicker">SCHEDULE</div>
+            <h1 id="title" contenteditable="plaintext-only" spellcheck="false" data-ph="タイトル"></h1>
+            <div id="subtitle" class="subtitle" contenteditable="plaintext-only" spellcheck="false" data-ph="サブタイトル（お客様名・物件名など）"></div>
+            <dl class="sh-meta">
+              <div><dt>期間</dt><dd id="span"></dd></div>
+              <div><dt>作成日</dt><dd><button id="createdAt" class="link-date" title="クリックで変更"></button></dd></div>
+              <div><dt>作成者</dt><dd id="author" contenteditable="plaintext-only" spellcheck="false" data-ph="未入力"></dd></div>
+            </dl>
+          </div>
+          <div class="stamps" id="stamps"></div>
+        </header>
+
+        <div class="board" id="board">
+          <div class="board-inner" id="boardInner">
+            <div class="corner" id="corner"></div>
+            <div class="tl-head" id="tlHead"></div>
+            <div class="left" id="left"></div>
+            <div class="chart" id="chart"></div>
+          </div>
+        </div>
+        <button class="add-row no-export" id="addRowBtn" data-icon="plus">タスクを追加</button>
+
+        <footer class="sheet-foot">
+          <div class="legend" id="legend"></div>
+          <div class="notes-wrap">
+            <div class="notes-l">備考</div>
+            <div id="notes" class="notes" contenteditable="plaintext-only" spellcheck="false" data-ph="メモ・注意事項など（印刷にも反映されます）"></div>
+          </div>
+          <div class="made-with">Made with Stride</div>
+        </footer>
+      </article>
+      <aside class="drawer" id="drawer" aria-label="タスクの詳細"></aside>
+    </main>
+
+    <div id="modalRoot"></div>
+    <div id="menuRoot"></div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <div id="tip" hidden></div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
