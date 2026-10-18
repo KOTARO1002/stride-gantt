@@ -64,6 +64,9 @@ const ICON = {
   down: '<path d="m6 9 6 6 6-6"/>',
   bar: '<rect x="3" y="5" width="10" height="4" rx="1.5"/><rect x="8" y="11" width="12" height="4" rx="1.5"/><rect x="5" y="17" width="7" height="3" rx="1.5"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
+  hammer: '<path d="m15 12-8.4 8.4a2.1 2.1 0 1 1-3-3L12 9"/><path d="M17.6 15 22 10.6"/><path d="m20.9 11.7-1.25-1.25a2.4 2.4 0 0 1-.7-1.7V7.9l-2.3-2.3a5.6 5.6 0 0 0-3.9-1.6H9l.9.8A6.2 6.2 0 0 1 12 9.5v1.4l2 2h2.5a2.4 2.4 0 0 1 1.7.7l1.25 1.25"/>',
+  key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/>',
+  house: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><path d="M10 21v-6h4v6"/>',
   save: '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>',
   folderOpen: '<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
 };
@@ -1715,7 +1718,7 @@ function openTemplates() {
     wide: true,
     body: `<p class="lead">テンプレートを選ぶと、日付を自動で割り付けたチャートが作成されます。あとから自由に編集できます。</p>
       <label class="fld inline"><span>開始日</span><input type="date" id="tplBase" value="${base}"></label>
-      <div class="tpl-grid">${TEMPLATES.map((t) => `<button class="tpl" data-id="${t.id}"><span class="tpl-emoji">${t.emoji}</span><b>${t.name}</b><small>${t.desc}</small></button>`).join('')}</div>`,
+      <div class="tpl-grid">${TEMPLATES.map((t) => `<button class="tpl" data-id="${t.id}"><span class="tpl-emoji">${icon(t.icon)}</span><b>${t.name}</b><small>${t.desc}</small></button>`).join('')}</div>`,
     onMount(m) {
       m.addEventListener('click', (e) => {
         const b = e.target.closest('.tpl');

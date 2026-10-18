@@ -1211,7 +1211,7 @@ input[type='range'] {
 }
 .tpl-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
   gap: 12px;
   margin-top: 14px;
 }
@@ -1231,7 +1231,18 @@ input[type='range'] {
   box-shadow: var(--shadow);
 }
 .tpl-emoji {
-  font-size: 26px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  background: var(--sel);
+  color: var(--accent);
+}
+.tpl-emoji .ic {
+  width: 22px;
+  height: 22px;
 }
 .tpl small {
   color: var(--muted);
