@@ -1,6 +1,6 @@
 // オフライン対応（ネットワーク優先・失敗時キャッシュ）
-const CACHE = 'stride-v3';
-const SHELL = ['./', './index.html', './css/style.css', './js/app.js', './js/dates.js', './js/holidays.js', './js/templates.js', './js/io.js', './js/files.js', './icons/icon.svg', './manifest.webmanifest'];
+const CACHE = 'stride-v4';
+const SHELL = ['./', './index.html', './css/style.css', './js/app.js', './js/dates.js', './js/holidays.js', './js/templates.js', './js/io.js', './js/files.js', './icons/icon.svg', './icons/logo.png', './manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

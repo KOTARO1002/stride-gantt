@@ -628,6 +628,7 @@ function renderHead() {
   const sp = projectSpan();
   el.span.textContent = sp ? `${D.slash(sp.start)} 〜 ${D.slash(sp.end)}（${D.diff(sp.start, sp.end) + 1}日間）` : '—';
   el.stamps.hidden = !m.showStamps;
+  $('#logo').hidden = !m.showLogo;
   el.stamps.innerHTML = m.stamps.map((s) => `<div class="stamp"><div class="stamp-l">${esc(s)}</div><div class="stamp-b"></div></div>`).join('');
   document.title = `${m.title || '無題'} — Stride`;
 }
@@ -1849,7 +1850,7 @@ function openSettings() {
         <div class="row2"><span>向き</span>${seg('orientation', [['landscape', '横'], ['portrait', '縦']])}</div>
         <div class="chks">${chk('fitOnePage', '1ページに収める')}</div>
         <h3>押印欄</h3>
-        <div class="chks">${chk('showStamps', '押印欄を表示', 'm')}</div>
+        <div class="chks">${chk('showStamps', '押印欄を表示', 'm')}${chk('showLogo', '会社ロゴを表示', 'm')}</div>
         <label class="fld"><span>項目（読点区切り）</span><input id="stampsInput" value="${esc(m.stamps.join('、'))}"></label>
       </section>
     </div>`,

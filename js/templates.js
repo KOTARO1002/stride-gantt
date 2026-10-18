@@ -13,6 +13,7 @@ export function blankState() {
       author: '',
       stamps: ['承認', '査閲', '担当者', '作成者'],
       showStamps: true,
+      showLogo: true,
       notes: '',
     },
     settings: {

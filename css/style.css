@@ -446,6 +446,34 @@ kbd {
   font-variant-numeric: tabular-nums;
   border-bottom: 1px dashed var(--line);
 }
+.sh-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  flex: none;
+}
+.logo {
+  display: block;
+  height: 26px;
+  width: auto;
+}
+.logo[hidden] {
+  display: none;
+}
+:root[data-theme='dark'] body:not(.exporting) .logo {
+  filter: invert(1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) body:not(.exporting) .logo {
+    filter: invert(1);
+  }
+}
+@media print {
+  .logo {
+    filter: none !important;
+  }
+}
 .stamps {
   display: flex;
   border: 1px solid var(--line);
@@ -1764,8 +1792,11 @@ body.exporting .sh-meta div:has(dd:empty) {
     flex-direction: column;
     gap: 12px;
   }
-  .stamps {
+  .sh-right {
     align-self: flex-end;
+  }
+  .logo {
+    height: 20px;
   }
   .stamp {
     width: 54px;
